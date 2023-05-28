@@ -21,6 +21,8 @@
 
     base_url = "https://api.binance.com"
 
+Для тестоы выбран symbol 'ETHUSDT'. Для выбора другого в app/main.py в функции create_orders укажите требуемый 
+    
 ## Установка
 ### Клонируем репозиторий
 
