@@ -28,7 +28,7 @@
 
     cd cat app
 
-    git clone https://github.com/se-andrey/questions.git
+    git clone https://github.com/se-andrey/binance_orders.git
 
 ### Создаем .env
 
