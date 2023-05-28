@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-
 app = FastAPI()
 
 # API_KEY и API_SECRET
@@ -33,6 +32,11 @@ class SymbolData(BaseModel):
     symbol: str
 
 
+class CheckOrder(BaseModel):
+    symbol: str
+    order: str
+
+
 @app.post("/create_orders")
 async def create_orders(data: OrderData):
     # Торговая пара для тестирования
@@ -53,7 +57,9 @@ async def create_orders(data: OrderData):
     if average_price < price_max_data:
         if average_price < price_min_data:
             raise HTTPException(status_code=400,
-                                detail=f'Wrong volume({volume}). You to try create {number} order with {average_price} to each. But priceMax in your post {price_max_data}')
+                                detail=f'Wrong volume({volume}). '
+                                       f'You to try create {number} order with {average_price} to each. '
+                                       f'But priceMax in your post {price_max_data}')
         price_max_data = average_price
 
     # Подключение к API Binance
@@ -77,7 +83,8 @@ async def create_orders(data: OrderData):
         elif price > price_max_symbol:
             if price > (average_price + amount_dif):
                 raise HTTPException(status_code=400,
-                                    detail=f'Wrong price: {price}. Correct price for {symbol}: {price_min_symbol} - {price_max_symbol}')
+                                    detail=f'Wrong price: {price}. '
+                                           f'Correct price for {symbol}: {price_min_symbol} - {price_max_symbol}')
             price = price_max_symbol
 
         # Отклонение для volume
@@ -92,7 +99,8 @@ async def create_orders(data: OrderData):
         # Проверяем досутимость количества
         if order_quantity < min_q or order_quantity > max_q:
             raise HTTPException(status_code=400,
-                                detail=f'Error quantity. Try to buy {order_quantity} {symbol}, but expected quantity {min_q} - {max_q}')
+                                detail=f'Error quantity. '
+                                       f'Try to buy {order_quantity} {symbol}, but expected quantity {min_q} - {max_q}')
 
         if side in ("SELL", "BUY"):
             try:
@@ -182,7 +190,8 @@ def take_symbol_limits(symbol: str, client):
 @app.post("/symbol_limits")
 async def check_symbol(data: SymbolData):
     client = Spot(api_key=API_KEY, api_secret=API_SECRET, base_url=base_url)
-    min_q, max_q, min_price, max_price, price_precision, q_precision, current_price = take_symbol_limits(data.symbol, client)
+    min_q, max_q, min_price, max_price, price_precision, q_precision, current_price = take_symbol_limits(data.symbol,
+                                                                                                         client)
 
     result = {
         "min quantity": min_q,
@@ -196,3 +205,14 @@ async def check_symbol(data: SymbolData):
     return result
 
 
+@app.post("/check_order")
+async def check_orders(data: SymbolData):
+    client = Spot(api_key=API_KEY, api_secret=API_SECRET, base_url=base_url)
+
+    try:
+        result = client.get_orders(symbol=data.symbol)
+
+    except ClientError as e:
+        raise HTTPException(status_code=400, detail=f'{e.error_code}: {e.error_message}')
+
+    return result
