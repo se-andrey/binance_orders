@@ -53,6 +53,10 @@ async def create_orders(data: OrderData):
     # примерная сумма одного ордера
     average_price = volume / number
 
+    # Проверяем корректность количества ордеров
+    if number < 1 or type(number) != int:
+        raise HTTPException(status_code=400, detail=f'Check number of orders. Your value: {number}')
+
     # Проверяем корректность суммы на каждый ордер:
     if average_price < price_max_data:
         if average_price < price_min_data:
@@ -61,6 +65,10 @@ async def create_orders(data: OrderData):
                                        f'You to try create {number} order with {average_price} to each. '
                                        f'But priceMax in your post {price_max_data}')
         price_max_data = average_price
+
+    # Проверяем корректность минимального и максимального прайса
+    if price_min_data > price_max_data:
+        raise HTTPException(status_code=400, detail=f'You price min {price_min_data} and price max {price_max_data}')
 
     # Подключение к API Binance
     client = Spot(api_key=API_KEY, api_secret=API_SECRET, base_url=base_url)
@@ -136,8 +144,7 @@ async def create_orders(data: OrderData):
                 raise HTTPException(status_code=400, detail=f'{e.error_code}, {e.error_message}')
 
         else:
-            raise HTTPException(status_code=404, detail=f'Only SELL or BUY available, not {side}')
-
+            raise HTTPException(status_code=400, detail=f'Only SELL or BUY available, not {side}')
     return orders_info
 
 
@@ -162,7 +169,6 @@ def take_symbol_limits(symbol: str, client):
     try:
         # Получение информации о символах
         symbol_info = client.exchange_info(symbol)
-
         # Информациф о минимальном и максимальном количестве символа для покупки и продажи
         filters = symbol_info['symbols'][0]['filters']
         quantity_filter = next(filter(lambda f: f['filterType'] == 'LOT_SIZE', filters))
@@ -214,5 +220,5 @@ async def check_orders(data: SymbolData):
 
     except ClientError as e:
         raise HTTPException(status_code=400, detail=f'{e.error_code}: {e.error_message}')
-
+    print(result)
     return result
